@@ -17,3 +17,12 @@ allrules/*
 yaraman
 *.bleve
 stuff/*
+.vscode/*
+allrules_old/*
+auto/*
+log/*
+*.yara
+*.json
+work/*
+yaraman.toml
+

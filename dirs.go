@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 )
 
-type fileCallbackType func(filename string) error
+type fileCallbackType func(ctx *Context, filename string) error
 
 func fileExists(filename string) bool {
 	info, err := os.Stat(filename)
@@ -25,7 +25,7 @@ func dirExists(filename string) bool {
 	return info.IsDir()
 }
 
-func findFiles(parent string, recursive bool, callback fileCallbackType) error {
+func findFiles(ctx *Context, parent string, recursive bool, callback fileCallbackType) error {
 	parent = filepath.Clean(parent)
 	pathExists := dirExists(parent)
 	if !pathExists {
@@ -41,9 +41,9 @@ func findFiles(parent string, recursive bool, callback fileCallbackType) error {
 				return nil
 			}
 
-			err = callback(path)
+			err = callback(ctx, path)
 			if err != nil {
-				return err
+				errorLogger.Error().AnErr("error", err).Str("filename", path).Msg("Error processing file")
 			}
 			return nil
 		})
@@ -56,7 +56,7 @@ func findFiles(parent string, recursive bool, callback fileCallbackType) error {
 	}
 
 	for _, fileInfo := range files {
-		err := callback(parent + string(os.PathListSeparator) + fileInfo.Name())
+		err := callback(ctx, parent+string(os.PathListSeparator)+fileInfo.Name())
 		if err != nil {
 			return err
 		}
