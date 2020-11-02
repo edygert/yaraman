@@ -53,7 +53,7 @@ type VersionCmd struct {
 // CLI is the master structure for all CLI commands.
 var CLI struct {
 	ConfigFile  string         `short:"c" default:"${config_file}"`
-	LogLevel    string         `short:"l" default:"normal" enum:"normal,debug" help:"Desired level of logging (normal, debug)"`
+	LogLevel    string         `short:"l" default:"info" enum:"info,debug" help:"Desired level of logging (info, debug)"`
 	Extensions  string         `short:"e" help:"Comma separated list of file extensions of yara rules (default yara,yar)"`
 	Version     VersionCmd     `cmd:"" help:"Show program version."`
 	Import      ImportCmd      `cmd:"" help:"Import YARA rules."`
@@ -63,7 +63,7 @@ var CLI struct {
 	Interactive InteractiveCmd `cmd:"" help:"Enter interactive mode."`
 }
 
-func yaraFileFunc(ctx *Context, filename string) error {
+func yaraFileFunc(ctx *YaramanContext, filename string) error {
 	found := false
 	for extension := range ctx.fileExtensions {
 		found, _ = filepath.Match(`*.`+extension, strings.ToLower(filepath.Base(filename)))
@@ -74,17 +74,17 @@ func yaraFileFunc(ctx *Context, filename string) error {
 	if !found {
 		return nil
 	}
-	return parseRulesetFile(filename, makeYaraDoc)
+	return parseRulesetFile(ctx, filename, makeRulesetDoc, makeRuleDoc)
 }
 
 // Run executes the VersionCmd.
-func (cmd *VersionCmd) Run(ctx *Context) error {
+func (cmd *VersionCmd) Run(ctx *YaramanContext) error {
 	fmt.Println("yaraman Version 0.1")
 	return nil
 }
 
 // Run executes the ImportCmd to import YARA rules from various sources.
-func (cmd *ImportCmd) Run(ctx *Context) error {
+func (cmd *ImportCmd) Run(ctx *YaramanContext) error {
 	switch {
 	case cmd.Dir != "":
 		logger.Info().Msg("Importing directory")
@@ -133,7 +133,7 @@ func (cmd *ImportCmd) Run(ctx *Context) error {
 }
 
 // Run starts yaraman in interactive mode.
-func (cmd *InteractiveCmd) Run(ctx *Context) error {
+func (cmd *InteractiveCmd) Run(ctx *YaramanContext) error {
 	box := tview.NewBox().SetBorder(true).SetTitle("Hello, world!")
 	if err := tview.NewApplication().SetRoot(box, true).Run(); err != nil {
 		errorLogger.Error().AnErr("error", err).Msg("Error from tview.Run")

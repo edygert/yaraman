@@ -46,31 +46,6 @@ var yaraKeywords = []interface{}{
 	"xor",
 }
 
-var mappingSource = []byte(`{
-    "types": {
-    	"yaradoc": {
-    		"properties": {
-    			"name": {
-    				"fields": [
-    					{
-    						"name": "name",
-    						"type": "text",
-    						"analyzer": "standard",
-    						"store": true,
-    						"index": true,
-                            "include_term_vectors": true,
-                            "include_in_all": true,
-                            "docvalues": true
-    					}
-    				]
-    			}
-    		}
-    	},
-    },
-    "type_field": "_type",
-    "default_type": "_default"
-}`)
-
 func initializeBleve() {
 	/*
 		var m *indexMapping = index.Mapping()

@@ -29,7 +29,7 @@ func (w *customLogWriter) WriteLevel(level zerolog.Level, p []byte) (n int, err 
 	return len(p), nil
 }
 
-func initLogging(ctx *Context) bool {
+func initLogging(ctx *YaramanContext) bool {
 	var (
 		err         error
 		errorFile   *os.File
@@ -38,6 +38,10 @@ func initLogging(ctx *Context) bool {
 		writer      zerolog.LevelWriter
 	)
 
+	err = os.MkdirAll(ctx.logDir, 0755)
+	if err != nil {
+		log.Fatal().AnErr("error", err).Str("directory", ctx.logDir).Msg("Could not create logging directory.")
+	}
 	errorFile, err = os.OpenFile(makeFullPath(ctx.logDir, "error.json"), os.O_APPEND|os.O_CREATE|os.O_RDWR, 0644)
 	if err != nil {
 		log.Fatal().AnErr("error", err).Str("filename", "error.json").Msg("Could not open log file.")
@@ -61,11 +65,13 @@ func initLogging(ctx *Context) bool {
 		minLevel: zerolog.ErrorLevel,
 		maxLevel: zerolog.PanicLevel,
 	}
+
 	filteredYaramanWriter := &customLogWriter{
 		writer:   yaramanWriter,
 		minLevel: zerolog.InfoLevel,
 		maxLevel: zerolog.WarnLevel,
 	}
+
 	if debugFile != nil {
 		debugWriter := zerolog.MultiLevelWriter(debugFile)
 		filteredDebugWriter := &customLogWriter{

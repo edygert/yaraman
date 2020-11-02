@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 )
 
-type fileCallbackType func(ctx *Context, filename string) error
+type fileCallbackType func(ctx *YaramanContext, filename string) error
 
 func fileExists(filename string) bool {
 	info, err := os.Stat(filename)
@@ -25,7 +25,7 @@ func dirExists(filename string) bool {
 	return info.IsDir()
 }
 
-func findFiles(ctx *Context, parent string, recursive bool, callback fileCallbackType) error {
+func findFiles(ctx *YaramanContext, parent string, recursive bool, callback fileCallbackType) error {
 	parent = filepath.Clean(parent)
 	pathExists := dirExists(parent)
 	if !pathExists {
@@ -56,7 +56,7 @@ func findFiles(ctx *Context, parent string, recursive bool, callback fileCallbac
 	}
 
 	for _, fileInfo := range files {
-		err := callback(ctx, parent+string(os.PathListSeparator)+fileInfo.Name())
+		err := callback(ctx, makeFullPath(parent, fileInfo.Name()))
 		if err != nil {
 			return err
 		}

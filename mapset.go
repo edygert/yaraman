@@ -4,33 +4,33 @@ import (
 	"strings"
 )
 
-// DCISet is a map used to emulate a set.
+// MapSet is a map used to emulate a set.
 // To add a member: s.Add(value).
 // To test if a value is a member of set "s":
 // 	if s[value] {
 // 		do stuff
 // 	}
 // To remove a value: s.Remove(value)
-type DCISet map[string]bool
+type MapSet map[string]bool
 
 // Add adds a string to the set.
-func (map1 DCISet) Add(v string) {
+func (map1 MapSet) Add(v string) {
 	map1[v] = true
 }
 
 // Remove removes a string from the set.
-func (map1 DCISet) Remove(v string) {
+func (map1 MapSet) Remove(v string) {
 	delete(map1, v)
 }
 
 // Contains tests for the presence of a value in the set
-func (map1 DCISet) Contains(v string) bool {
+func (map1 MapSet) Contains(v string) bool {
 	_, ok := map1[v]
 	return ok
 }
 
 // Join returns a string of all the entries separated by the specified separator.
-func (map1 DCISet) Join(separator string) string {
+func (map1 MapSet) Join(separator string) string {
 	var builder strings.Builder
 
 	first := true
@@ -45,10 +45,10 @@ func (map1 DCISet) Join(separator string) string {
 	return builder.String()
 }
 
-// Intersection returns a new DCISet that is the intersection
+// Intersection returns a new MapSet that is the intersection
 // of the receiver and the passed in map.
-func (map1 DCISet) Intersection(map2 DCISet) DCISet {
-	intersect := DCISet{}
+func (map1 MapSet) Intersection(map2 MapSet) MapSet {
+	intersect := MapSet{}
 	for k := range map1 {
 		if map2[k] {
 			intersect[k] = true
@@ -57,10 +57,10 @@ func (map1 DCISet) Intersection(map2 DCISet) DCISet {
 	return intersect
 }
 
-// Union returns a new DCISet that is the union
+// Union returns a new MapSet that is the union
 // of the receiver and the passed in map.
-func (map1 DCISet) Union(map2 DCISet) DCISet {
-	union := DCISet{}
+func (map1 MapSet) Union(map2 MapSet) MapSet {
+	union := MapSet{}
 	for k := range map1 {
 		union[k] = true
 	}
@@ -70,10 +70,10 @@ func (map1 DCISet) Union(map2 DCISet) DCISet {
 	return union
 }
 
-// Minus returns a new DCISet that is the entries
+// Minus returns a new MapSet that is the entries
 // of the receiver minus the entries of the passed in map.
-func (map1 DCISet) Minus(map2 DCISet) DCISet {
-	minus := DCISet{}
+func (map1 MapSet) Minus(map2 MapSet) MapSet {
+	minus := MapSet{}
 	for k := range map1 {
 		if !map2[k] {
 			minus[k] = true
@@ -83,21 +83,21 @@ func (map1 DCISet) Minus(map2 DCISet) DCISet {
 }
 
 // AddFrom adds all of map2's entries to the receiver.
-func (map1 DCISet) AddFrom(map2 DCISet) {
+func (map1 MapSet) AddFrom(map2 MapSet) {
 	for k := range map2 {
 		map1[k] = true
 	}
 }
 
 // AddFromSlice adds all of slice's entries to the receiver.
-func (map1 DCISet) AddFromSlice(s []string) {
+func (map1 MapSet) AddFromSlice(s []string) {
 	for _, v := range s {
 		map1.Add(v)
 	}
 }
 
 // Subtract subtracts all of map2's entries from the receiver.
-func (map1 DCISet) Subtract(map2 DCISet) {
+func (map1 MapSet) Subtract(map2 MapSet) {
 	for k := range map2 {
 		delete(map1, k)
 	}

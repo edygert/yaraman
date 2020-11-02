@@ -11,8 +11,8 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// Context provides context for CLI handling
-type Context struct {
+// YaramanContext provides context for CLI handling
+type YaramanContext struct {
 	configFile     string
 	logDir         string
 	execDir        string
@@ -20,7 +20,8 @@ type Context struct {
 	rulesDir       string
 	exportDir      string
 	logLevel       string
-	fileExtensions DCISet
+	fileExtensions MapSet
+	repoHosts      MapSet
 }
 
 func makeFullPath(directory string, filename string) string {
@@ -30,7 +31,7 @@ func makeFullPath(directory string, filename string) string {
 	return directory + string(os.PathSeparator) + filename
 }
 
-func initialize(ctx *Context) {
+func initialize(ctx *YaramanContext) {
 	var extensions string
 
 	if fileExists(ctx.configFile) {
@@ -48,18 +49,29 @@ func initialize(ctx *Context) {
 		extensions = config.GetDefault("yaraman.file_extensions", "yara,yar").(string)
 		// Only use the config file extensions if they were not specified on the command line
 		if extensions != "" && len(ctx.fileExtensions) == 0 {
-			ctx.fileExtensions = DCISet{}
+			ctx.fileExtensions = MapSet{}
 			for _, extension := range strings.Split(extensions, ",") {
 				ctx.fileExtensions.Add(extension)
 			}
+		}
+
+		repoHosts := config.GetDefault("yaraman.repo_hosts", "github.com").(string)
+		hosts := strings.Split(repoHosts, ";")
+		for _, host := range hosts {
+			ctx.repoHosts.Add(host)
 		}
 	} else {
 		initLogging(ctx)
 		logger.Info().Msg("No configuration file, using default settings.")
 	}
 	if len(ctx.fileExtensions) == 0 {
-		ctx.fileExtensions = DCISet{"yara": true, "yar": true}
+		ctx.fileExtensions.Add("yara")
+		ctx.fileExtensions.Add("yar")
 	}
+	if len(ctx.repoHosts) == 0 {
+		ctx.repoHosts.Add("github.com")
+	}
+	logger.Debug().Msgf("%v", ctx)
 
 	loc, err := time.LoadLocation("UTC")
 	if err != nil {
@@ -88,15 +100,16 @@ func main() {
 		},
 		kong.UsageOnError(),
 	)
-	ctx := &Context{
+	ctx := &YaramanContext{
 		configFile:     CLI.ConfigFile,
 		logLevel:       CLI.LogLevel,
 		execDir:        execDir,
-		fileExtensions: DCISet{},
+		fileExtensions: MapSet{},
 		rulesDir:       makeFullPath(execDir, "rules"),
 		databaseDir:    makeFullPath(execDir, "db"),
 		logDir:         makeFullPath(execDir, "log"),
 		exportDir:      makeFullPath(execDir, "export"),
+		repoHosts:      MapSet{},
 	}
 	if CLI.Extensions != "" {
 		for _, extension := range strings.Split(CLI.Extensions, ",") {
@@ -105,9 +118,9 @@ func main() {
 	}
 	initialize(ctx)
 	logger.Debug().Msgf("context: %v", ctx)
-	err := kongContext.Run(ctx)
+	kongContext.Run(ctx)
 	//	if err != nil {
 	//		logger.Fatal().AnErr("error", err).Msg("Fatal error, terminating")
 	//	}
-	kongContext.FatalIfErrorf(err)
+	//	kongContext.FatalIfErrorf(err)
 }

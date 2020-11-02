@@ -7,7 +7,9 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net/url"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"unicode"
@@ -17,8 +19,11 @@ import (
 	jsonpb "github.com/golang/protobuf/jsonpb"
 )
 
+// Ruleset is defined as the full path and file name of a file
+// containing 1 or more yara rules.
 type yaraRulesetType struct {
-	ID string `json:"id"`
+	ID          string `json:"id"`
+	RulesetName string `json:"ruleset"`
 	// These tags are extracted from the ruleset path. Each part of the
 	// path is a separate tag.
 	RulesetTags []string `json:"ruleset_tags"`
@@ -50,7 +55,8 @@ const (
 	abbrevPattern    = `^[A-Z0-9]{2,}`
 )
 
-type yaraCallbackFunc func(rulesetName string, rule *ast.Rule)
+type ruleCallbackFunc func(ctx *YaramanContext, rulesetName string, rule *ast.Rule)
+type rulesetCallbackFunc func(ctx *YaramanContext, rulesetName string, ruleset *ast.RuleSet)
 
 var (
 	camelRE  = regexp.MustCompile(camelCasePattern)
@@ -215,7 +221,7 @@ func makeJSON(rulesetName string, rule *ast.Rule) {
 	ruleToJSON(rule, os.Stdout)
 }
 
-func makeYaraDoc(rulesetName string, rule *ast.Rule) {
+func makeRuleDoc(ctx *YaramanContext, rulesetName string, rule *ast.Rule) {
 	var buf bytes.Buffer
 	rule.WriteSource(&buf)
 
@@ -242,25 +248,60 @@ func makeYaraDoc(rulesetName string, rule *ast.Rule) {
 	}
 }
 
-func parseRuleset(rulesetName string, reader io.Reader, yaraCallback yaraCallbackFunc) error {
+func rulesetURLToRulesDir(ctx *YaramanContext, rulesetName string) (string, error) {
+	if strings.HasPrefix(rulesetName, "http") {
+		parsedURL, err := url.Parse(rulesetName)
+		if err != nil {
+			return "", err
+		}
+
+		// If the url contains the name of a repo, treat the whole
+		// path as the name of a directory.
+		if ctx.repoHosts.Contains(parsedURL.Host) {
+			return ctx.rulesDir + string(os.PathSeparator) + parsedURL.Host + parsedURL.Path, nil
+		}
+
+		// otherwise treat all but the last part of the path as the
+		// directory and the last part of the path as the filename.
+		return parsedURL.Host + string(os.PathSeparator) + filepath.FromSlash(parsedURL.Path), nil
+	}
+	return "", nil
+}
+
+func makeRulesetDoc(ctx *YaramanContext, rulesetName string, ruleset *ast.RuleSet) {
+	rulesetDoc := &yaraRulesetType{
+		ID:          rulesetName,
+		RulesetTags: []string{},
+		Imports:     append([]string{}, ruleset.Imports...),
+		Includes:    append([]string{}, ruleset.Includes...),
+	}
+	if rulesetDoc != nil {
+
+	}
+}
+
+func parseRuleset(ctx *YaramanContext, rulesetName string, reader io.Reader, rulesetCallback rulesetCallbackFunc, ruleCallback ruleCallbackFunc) error {
 	ruleset, err := gyp.Parse(reader)
 	if err != nil {
 		return err
 	}
+
+	rulesetCallback(ctx, rulesetName, ruleset)
+
 	for _, rule := range ruleset.Rules {
-		yaraCallback(rulesetName, rule)
+		ruleCallback(ctx, rulesetName, rule)
 	}
 	return nil
 }
 
-func parseRulesetFile(filename string, yaraCallback yaraCallbackFunc) error {
+func parseRulesetFile(ctx *YaramanContext, filename string, rulesetCallback rulesetCallbackFunc, ruleCallback ruleCallbackFunc) error {
 	file, err := os.Open(filename)
 	if err != nil {
 		errorLogger.Error().AnErr("error", err).Str("filename", filename).Msg("Could not open file.")
 	}
 	defer file.Close()
 
-	err = parseRuleset(filename, file, yaraCallback)
+	err = parseRuleset(ctx, filename, file, rulesetCallback, ruleCallback)
 	if err != nil {
 		errorLogger.Error().AnErr("error", err).Str("filename", filename).Msg("Error parsing ruleset")
 	}
